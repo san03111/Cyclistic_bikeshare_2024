@@ -2,4 +2,4 @@
 Solving Cyclistic_bikeshare Case study, including Analysist and Visualization data
 
 # Datasets
-- <a href="https://divvy-tripdata.s3.amazonaws.com/index.html"> Cyclist trip data<a/>
+- <a href="https://divvy-tripdata.s3.amazonaws.com/index.html"> Cyclistic trip data<a/>
