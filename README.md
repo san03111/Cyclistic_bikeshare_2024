@@ -11,15 +11,17 @@ to a fleet of 5,824 bicycles that are geotracked and locked into a network of 69
 Chicago. The bikes can be unlocked from one station and returned to any other station in the
 system anytime.
 
-### ASK (Step 1)
+### ASK (STEP 1)
 #### Question
 - How do annual members and casual riders use Cyclistic bikes differently?
 - Why would casual riders buy Cyclistic annual memberships?
 - How can Cyclistic use digital media to influence casual riders to become members?
     
-- **Business task** : Analyze trip data from the previous 12 months of Cyclistic trip data to develop strategies oriented to convert casual riders to members
-- **Primary stakeholders**: Lilt Moreno, The director of marketing and the executive team.
-- **Secondary stakeholders**: The marketing analytics team
+**Business task** : Analyze trip data from the previous 12 months of Cyclistic trip data to develop strategies oriented to convert casual riders to members
+
+**Primary stakeholders**: Lily Moreno, The director of marketing and the executive team.
+
+**Secondary stakeholders**: The marketing analytics team
 
 ### Prepare (Step 2)
 The dataset used in this project is the previous 12 months trip data provided by <a href="https://divvy-tripdata.s3.amazonaws.com/index.html"> **Divvy Tripdata**<a/>. It consists of 12 comma-separated value (CSV) files, each representing one month of Cyclistic bike rides throughout the year 2024.
@@ -40,43 +42,15 @@ Since the dataset is relatively large, SQL Server was used for data loading and 
 First we need to create a new database for this project called **cyclistic_bikeshare** with this following code : 
 <a href=https://github.com/san03111/Cyclistic_bikeshare_2024/blob/main/scripts/crt_database.sql>**Create Database**<a/>
 
-<pre> ```sql 
-    
-USE master;
-GO
-
--- Drop database "cyclistic_bikeshare" IF it already exists
-IF EXISTS (SELECT 1 FROM sys.databases WHERE name = 'cyclistic_bikeshare')
-BEGIN 
-    ALTER DATABASE cyclistic_bikeshare SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE cyclistic_bikeshare;
-END;
-GO
-
--- Create the new "cyclistic_bikeshare" database
+```sql 
 CREATE DATABASE cyclistic_bikeshare;
 GO
-
--- Switch context to the new database
-USE cyclistic_bikeshare;
-GO
-
--- Create schemas to organize data pipelines
-CREATE SCHEMA bronze;
-GO
-
-CREATE SCHEMA silver;
-GO
-
-CREATE SCHEMA gold;
-GO 
-
-``` </pre>
+``` 
 
 Next, we create new tables for each month (e.g., bronze.tripdata_jan):
 
-<pre> ```sql 
-
+```sql
+-- January
 IF OBJECT_ID('bronze.tripdata_jan', 'U') IS NOT NULL
     DROP TABLE bronze.tripdata_jan;
 GO
@@ -96,9 +70,89 @@ CREATE TABLE bronze.tripdata_jan (
     member_casual NVARCHAR(50)
 );
 GO
-    
-``` </pre> 
-**Repeate for each months until december**
+```
+**Repeate the same step for each months until december**, you can see the full script <a href=https://github.com/san03111/Cyclistic_bikeshare_2024/blob/main/scripts/bronze/crt_bronze_tbl.sql>**here**</a> 
+
+After creating the tables in the Bronze layer, the next step is to load the raw data from the 12 CSV files (January–December) into their corresponding tables. Since each CSV contains thousand of rows, we use the BULK INSERT command in SQL Server to efficiently load the files
+
+```sql
+-- January
+TRUNCATE TABLE bronze.tripdata_jan;
+BULK INSERT bronze.tripdata_jan
+FROM 'C:\Users\PC\Documents\cyclistic_bikeshare project\datasets\202401-divvy-tripdata.csv'
+WITH (
+    FIRSTROW = 2,
+    FIELDTERMINATOR = ',',
+    TABLOCK
+);
+```
+**Repeate the same step for each months until december**.
+This process ensures all the raw data is ingested into the Bronze schema before moving to the transformation stage in the Silver layer. you can see the full script for bulk insert <a href=https://github.com/san03111/Cyclistic_bikeshare_2024/blob/main/scripts/bronze/load_bronze_tbl.sql>**here**</a> 
+
+After loading all the data into the database, the *R.O.C.C.C.* method was applied to evaluate the credibility of the dataset:
+- **Reliable** – Data was provided by *Motivate International Inc*. under this <a href=https://divvybikes.com/data-license-agreement>**license**<a/>.
+- **Original** – The source of the data is the City of Chicago’s Divvy bike-sharing service.
+- **Comprehensive** – The dataset includes all the necessary information to address the business task.
+- **Current** – The data was less than one year old at the time of this analysis.
+- **Cited** – The dataset is publicly available <a href="https://divvy-tripdata.s3.amazonaws.com/index.html">here<a/>.
+
+### Process (STEP 3)
+At this stage, the raw data in the Bronze layer was not yet ready for analysis due to formatting issues, inconsistent data types, and the presence of outliers. Therefore, several transformations and cleaning steps were applied to prepare the data for further analysis.
+
+The following steps were taken in order to ensure data was clean and ready for analysis:
+
+The first step was to remove unnecessary quotation marks that appeared after the bulk insert process from CSV files. Next, the columns started_at and ended_at were converted from text into DATETIME2(3) format so that the data could be used for proper time-based calculations :
+```sql
+SELECT
+    REPLACE(member_casual, '"', '') AS member_casual,
+    REPLACE(rideable_type, '"', '') AS rideable_type,
+    CAST(REPLACE(startet_at, '"', '') AS DATETIME2(3)) AS started_at,
+    CAST(REPLACE(ended_at, '"', '') AS DATETIME2(3)) AS ended_at
+FROM bronze.tripdata_jan
+```
+Next, delete unnecessary columns and outliers from the database to focus only on the variables required for the analysis. Since the business question is to understand how annual members and casual riders use Cyclistic bikes differently, we only needed information about membership type, bike type, and trip duration (from started_at and ended_at). 
+
+Therefore, columns such as station name, station ID, latitude, and longitude were excluded. At the same time, trips with invalid records (e.g., missing values, zero or negative duration, or extremely long rides) were removed to maintain data quality.
+The cleaned and filtered data was then inserted into the Silver tables using the following query:
+```sql
+
+-- January
+INSERT INTO silver.tripdata_jan (
+    member_casual,
+    rideable_type,
+    started_at,
+    ended_at
+)
+SELECT
+    REPLACE(member_casual, '"', '') AS member_casual,
+    REPLACE(rideable_type, '"', '') AS rideable_type,
+    CAST(REPLACE(startet_at, '"', '') AS DATETIME2(3)) AS started_at,
+    CAST(REPLACE(ended_at, '"', '') AS DATETIME2(3)) AS ended_at
+FROM bronze.tripdata_jan
+```
+After cleaning each monthly dataset in the Silver layer, the next step was to combine all months into a single table to make the analysis more efficient. Instead of querying each month separately, the 12 monthly tables were unioned together into silver.tripdata_year.
+This allows us to work with the entire year’s dataset at once and simplifies the process of generating insights
+The following query demonstrates how the monthly Silver tables were combined:
+```sql
+
+CREATE TABLE silver.tripdata_year (
+    member_casual NVARCHAR(50),
+    rideable_type NVARCHAR(50),
+    started_at DATETIME2(3),
+    ended_at DATETIME2(3)
+);
+INSERT INTO silver.tripdata_year
+SELECT * FROM silver.tripdata_jan
+UNION ALL
+SELECT * FROM silver.tripdata_feb
+UNION ALL
+...
+UNION ALL
+SELECT * FROM silver.tripdata_dec
+```
+### Analyze (STEP 4)
+
+
 
 
 
