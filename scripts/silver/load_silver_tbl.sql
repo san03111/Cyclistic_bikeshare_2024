@@ -2,6 +2,12 @@
 ===============================================================================
 Transform Bronze to Silver Tables (Jan - Dec)
 ===============================================================================
+⚠ WARNING:
+- Make sure you have already created the silver tables for each month 
+      (silver.tripdata_jan ... silver.tripdata_dec) before running this script.
+- If the tables do not exist, the script will fail.
+- Use the "crt_silver_tbl" script first.
+
     This script will:
     1. Insert data from bronze monthly tables into their silver counterparts.
     2. Clean the raw data by:
