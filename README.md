@@ -11,5 +11,11 @@ to a fleet of 5,824 bicycles that are geotracked and locked into a network of 69
 Chicago. The bikes can be unlocked from one station and returned to any other station in the
 system anytime.
 
-# Datasets
+### ASK (Step 1)
+
+- **Business task** : Analyze trip data from the previous 12 months of Cyclistic trip data to know how do annual members and casual riders use Cyclistic bikes differently?
+- **Primary stakeholders**: Lilt Moreno, The director of marketing and the executive team.
+- **Secondary stakeholders**: The marketing analytics team
+
+### Datasets
 - <a href="https://divvy-tripdata.s3.amazonaws.com/index.html"> Cyclistic trip data<a/>
