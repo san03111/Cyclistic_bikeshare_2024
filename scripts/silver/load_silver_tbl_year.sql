@@ -7,6 +7,8 @@ Union All Silver Monthly Tables
       already exist and contain data before running this script.
     - This script creates a new consolidated table (silver.tripdata_all) 
       and unions all months into it.
+    - Use the "load_silver_tbl_month" script first.
+    - so the order is "crt_silver_tbl" --> "load_silver_tbl_month" --> "load_silver_tbl_year"
 
     Purpose:
     - Combine all monthly data into one master table for easier querying.
@@ -14,8 +16,8 @@ Union All Silver Monthly Tables
 */
 
 -- Drop consolidated table if it exists
-IF OBJECT_ID('silver.tripdata_all', 'U') IS NOT NULL
-    DROP TABLE silver.tripdata_all;
+IF OBJECT_ID('silver.tripdata_year', 'U') IS NOT NULL
+    DROP TABLE silver.tripdata_year;
 
 -- Create consolidated table
 CREATE TABLE silver.tripdata_all (
