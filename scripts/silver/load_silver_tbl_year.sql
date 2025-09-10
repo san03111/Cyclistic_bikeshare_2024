@@ -5,7 +5,7 @@ Union All Silver Monthly Tables
     ⚠ WARNING:
     - Ensure that all monthly silver tables (silver.tripdata_jan ... silver.tripdata_dec)
       already exist and contain data before running this script.
-    - This script creates a new consolidated table (silver.tripdata_all) 
+    - This script creates a new consolidated table (silver.tripdata_year) 
       and unions all months into it.
     - Use the "load_silver_tbl_month" script first.
     - so the order is "crt_silver_tbl" --> "load_silver_tbl_month" --> "load_silver_tbl_year"
@@ -20,7 +20,7 @@ IF OBJECT_ID('silver.tripdata_year', 'U') IS NOT NULL
     DROP TABLE silver.tripdata_year;
 
 -- Create consolidated table
-CREATE TABLE silver.tripdata_all (
+CREATE TABLE silver.tripdata_year (
     member_casual NVARCHAR(50),
     rideable_type NVARCHAR(50),
     started_at DATETIME2(3),
@@ -28,7 +28,7 @@ CREATE TABLE silver.tripdata_all (
 );
 
 -- Insert all months into one table
-INSERT INTO silver.tripdata_all
+INSERT INTO silver.tripdata_year
 SELECT * FROM silver.tripdata_jan
 UNION ALL
 SELECT * FROM silver.tripdata_feb
