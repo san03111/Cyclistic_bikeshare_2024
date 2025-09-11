@@ -242,6 +242,10 @@ there is top 3 recommendations base on this analysist
 - **Enhance commuter benefits for members** – Improve services that appeal to daily commuters, like faster check-in processes, integration with public transportation, or rewards for frequent weekday rides.
 - **Personalize marketing using ride behavior insights** – Use data on ride duration and time-of-day patterns to tailor marketing messages. For example, highlight cost savings for long rides when targeting casual riders, and emphasize reliability and convenience when targeting daily commuters.
 
+## About Me 🙋‍♂️ 
+Ikhsan Alwi
+
+Computer engineering graduate | Aspiring Data Analyst and Data Scienst
 
 
 
