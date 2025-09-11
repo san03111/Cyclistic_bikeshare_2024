@@ -1,5 +1,9 @@
 # Cyclistic Bike-Share Case Study
 
+<p align="center">
+  <img src="https://github.com/san03111/Cyclistic_bikeshare_2024/blob/b087af4f05587261f6f6482fed4c21cca4726f64/Cyclistic-bikeshare.png" alt="Cyclistic Bike-Share" />
+</p>
+
 ## Scenario
 
 This case study is about Cyclistic, a fictional bike-share company that provides bicycles to customers through single rides, full day passes or annual subscriptions. The director of marketing believes that for the company to grow an increase in the number of annual members is required, for which the marketing team has decided to come up with a strategy that will convert casual riders to annual riders. The job is to work along with the marketing team to gather information on how customers make use of their bikes differently with the purpose of identifying trends and generating insights.
@@ -11,8 +15,8 @@ to a fleet of 5,824 bicycles that are geotracked and locked into a network of 69
 Chicago. The bikes can be unlocked from one station and returned to any other station in the
 system anytime.
 
-### ASK (STEP 1)
-#### Question
+## ASK (STEP 1)
+### Question
 - How do annual members and casual riders use Cyclistic bikes differently?
 - Why would casual riders buy Cyclistic annual memberships?
 - How can Cyclistic use digital media to influence casual riders to become members?
@@ -23,7 +27,7 @@ system anytime.
 
 **Secondary stakeholders**: The marketing analytics team
 
-### Prepare (Step 2)
+## PREPARE (Step 2)
 The dataset used in this project is the previous 12 months trip data provided by <a href="https://divvy-tripdata.s3.amazonaws.com/index.html"> **Divvy Tripdata**<a/>. It consists of 12 comma-separated value (CSV) files, each representing one month of Cyclistic bike rides throughout the year 2024.
 
 Since the dataset is relatively large, SQL Server was used for data loading and processing. To ensure a structured and scalable workflow, the Bronze, Silver, and Gold schema approach was applied, consisting of three stages of data preparation:
@@ -96,7 +100,7 @@ After loading all the data into the database, the *R.O.C.C.C.* method was applie
 - **Current** – The data was less than one year old at the time of this analysis.
 - **Cited** – The dataset is publicly available <a href="https://divvy-tripdata.s3.amazonaws.com/index.html">here<a/>.
 
-### Process (STEP 3)
+## PROCESS (STEP 3)
 At this stage, the raw data in the Bronze layer was not yet ready for analysis due to formatting issues, inconsistent data types, and the presence of outliers. Therefore, several transformations and cleaning steps were applied to prepare the data for further analysis.
 
 The following steps were taken in order to ensure data was clean and ready for analysis:
@@ -150,7 +154,93 @@ UNION ALL
 UNION ALL
 SELECT * FROM silver.tripdata_dec
 ```
-### Analyze (STEP 4)
+## ANALYZE (STEP 4)
+At this stage, the cleaned and standardized data from the Silver Layer is further transformed into the Gold Layer, which serves as the final dataset ready for analysis.
+The query below performs several important transformations:
+   - Calculates trip duration (ride length) :
+     
+ ```sql
+    DATEDIFF(MINUTE, start_time_stamp, return_time_stamp) AS duration
+ ```
+   - Groups trip duration into categories: 
+ ```sql
+    CASE 
+        WHEN DATEDIFF(MINUTE, start_time_stamp, return_time_stamp) < 10 THEN 'Under 10'
+        WHEN DATEDIFF(MINUTE, start_time_stamp, return_time_stamp) BETWEEN 10 AND 30 THEN '10 to 30'
+        WHEN DATEDIFF(MINUTE, start_time_stamp, return_time_stamp) BETWEEN 30 AND 60 THEN '30 to 60'
+        ELSE 'Over 60'
+    END AS group_duration
+ ```
+   → This helps identify differences in ride length distributions between members and casual riders.
+
+   - Classifies seasons based on the trip’s start month (start_month), with the following mapping:
+ ```sql
+CASE 
+        WHEN start_month IN ('February','March','April') THEN 'Spring'
+        WHEN start_month IN ('November','December','January') THEN 'Winter'
+        WHEN start_month IN ('August','September','October') THEN 'Fall'
+        WHEN start_month IN ('May','June','July') THEN 'Summer'
+    END AS season
+ ```
+   → Seasonal context is critical to analyze how weather conditions influence bike usage.
+
+   - Enriches time-based features such as trip date, weekday name, day number, and trip start/return hour.
+ ```sql
+    SELECT
+        member_casual AS membership_type,
+        rideabel_type AS bike_type,
+        started_at AS start_time_stamp,
+        CAST(started_at AS DATE) AS start_date,
+        DATENAME(MONTH, started_at) AS start_month,
+        DATENAME(WEEKDAY, started_at) AS start_day,
+        DAY(started_at) AS start_day_num,
+        DATEPART(HOUR, started_at) AS start_hour,
+        ended_at AS return_time_stamp,
+        CAST(ended_at AS DATE) AS return_date,
+        DATENAME(MONTH, ended_at) AS return_month,
+        DATENAME(WEEKDAY, ended_at) AS return_day,
+        DAY(ended_at) AS return_day_num,
+        DATEPART(HOUR, ended_at) AS return_hour
+    FROM silver.tripdata_year
+  ```
+   - Removes trip outliers by ensuring only positive-duration trips are included.
+```sql
+WHERE DATEDIFF(MINUTE, start_time_stamp, return_time_stamp) > 0;
+```
+   - Performes multiple calculation to get a better sense of the data layout :
+```sql
+SELECT
+    MIN(duration) AS lowest_ride_length,   -- lowest ride length
+    MAX(duration) AS highest_ride_length,  -- highest ride length
+    AVG(CAST(duration AS FLOAT)) AS mean_ride_length  -- ride length mean
+FROM gold.tripdata_year;
+```
+
+This way, the Gold dataset is not just raw trip information but is enhanced with analytical metrics that can directly answer the key business question: 
+- how do annual members and casual riders use Cyclistic bikes differently?
+- Why would casual riders buy Cyclistic annual memberships?
+- How can Cyclistic use digital media to influence casual riders to become members?
+
+## SHARE (STEP 5)
+Tableau was used to design clear and compelling visualizations that highlight the most relevant patterns and differences between members and casual riders. These dashboards were then integrated into a PowerPoint presentation aimed at delivering actionable insights to stakeholders in an accessible and visually engaging way.
+
+The dashboard can be downloaded by clicking on this <a href="https://public.tableau.com/app/profile/ikhsan.alwi/viz/Cyclistic_bikeshare_17573373880320/Dashboard1"> **link**<a/>.
+
+In summary, the analysis supports the following conclusions :
+- Members ride more frequently than casual riders, with 63% of trips coming from members compared to 37% from casuals.
+- However, the average ride length shows the opposite pattern: members ride for 12.92 minutes on average, while casual riders average 25.63 minutes. This suggests that members tend to use bikes for shorter, more practical trips, whereas casual riders take longer rides.
+- Members ride more often on weekdays (Monday through Friday), while casual riders are more active during weekends.
+- Members typically ride most around 7–8 AM, with activity stabilizing afterward and peaking again at 5 PM. In contrast, casual riders start relatively low at 5 AM and steadily increase until peaking at 5 PM.
+- When grouped by ride duration, members are more likely to use bikes for trips under 10 minutes, while casual riders more commonly ride between 10 and 30 minutes. Both groups show relatively low usage for trips lasting 30–60 minutes or over 60 minutes.
+- Both members and casual riders share a similar seasonal pattern, with higher usage from May through October (summer and fall) and much lower activity during spring and winter.
+
+## ACT (STEP 6)
+
+From these findings, we can conclude that members are mostly local residents who use bikes as part of their daily routine or for commuting to work, with consistent ride durations across weekdays. On the other hand, casual riders are less frequent users, often riding bikes as a temporary mode of transportation—for example, tourists exploring the city.
+there is top 3 recommendations base on this analysist
+- **Target seasonal campaigns toward casual riders** – Launch promotional offers during peak tourist seasons (summer and fall) to encourage casual riders to convert to members, such as discounted short-term memberships or trial packages.
+- **Enhance commuter benefits for members** – Improve services that appeal to daily commuters, like faster check-in processes, integration with public transportation, or rewards for frequent weekday rides.
+- **Personalize marketing using ride behavior insights** – Use data on ride duration and time-of-day patterns to tailor marketing messages. For example, highlight cost savings for long rides when targeting casual riders, and emphasize reliability and convenience when targeting daily commuters.
 
 
 
@@ -159,6 +249,3 @@ SELECT * FROM silver.tripdata_dec
 
 
 
-
-### Dashbord
-<a href="https://public.tableau.com/app/profile/ikhsan.alwi/viz/Cyclistic_bikeshare_17573373880320/Dashboard1"> **Tableau**
